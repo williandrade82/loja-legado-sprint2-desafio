@@ -97,6 +97,19 @@ try {
     `time existente com filtro sem resultado → ${vazio.isError ? 'erro' : `count ${contagem(vazio)}`}`,
     'dado vazio é resposta válida: count 0 (o erro é só para time inexistente)');
 
+  // Ordem estável (severidade, depois id) e total quando o limit corta.
+  const ordemSev = { error: 0, warning: 1, info: 2 };
+  const listaLoja = (() => { try { return JSON.parse(semFiltro.text).rules; } catch { return []; } })();
+  const ordenada = listaLoja.every((r, i) => i === 0 || ordemSev[listaLoja[i - 1].severity] < ordemSev[r.severity]
+    || (ordemSev[listaLoja[i - 1].severity] === ordemSev[r.severity] && listaLoja[i - 1].id < r.id));
+  checar('rules_ordem', null, listaLoja.length > 0 && ordenada,
+    'regras ordenadas por severidade e depois por id', 'regras fora da ordem severidade → id');
+  const corte = await chamar(enxuto, 'get_team_review_rules', { team_id: TIME, limit: 1 });
+  const corteJson = (() => { try { return JSON.parse(corte.text); } catch { return {}; } })();
+  checar('rules_total', null, corteJson.count === 1 && corteJson.total > 1,
+    `limit 1 → count 1, total ${corteJson.total}`, `limit 1 → count ${corteJson.count}, total ${corteJson.total}`,
+    'devolva total (regras que casam com os filtros, antes do limit) além de count');
+
   const adrFrete = await chamar(enxuto, 'search_team_adrs', { team_id: TIME, keyword: 'frete' });
   resultado.retornos.search_team_adrs_frete = { adrs: contagem(adrFrete), caracteres: adrFrete.text.length };
 

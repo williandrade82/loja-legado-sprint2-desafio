@@ -18,7 +18,7 @@ export function registerReviewRulesTools(server) {
       description:
         'Retrieves the ACTIVE code review rules of a team. ' +
         'Use this when reviewing a PR to know which standards the team enforces. ' +
-        'Returns rules with category and severity; "error" = must fix (blocks the PR), "warning" = should fix, "info" = nice to have. ' +
+        'Returns { rules, count, total } sorted by severity then id; each rule has id (R-NN for loja, CK-NN for checkout; cite it in the review text, log_review takes no rule ids), category, severity and rule text. "error" = must fix (blocks the PR), "warning" = should fix, "info" = nice to have. ' +
         'An unknown team_id is an error that lists the valid teams; a valid team whose filters match nothing returns an empty list (count 0), which is a valid answer, not an error.',
       inputSchema: {
         team_id: z.string().min(1).describe('Team identifier, must exist (e.g. "loja"). An unknown id returns an error listing the valid teams.'),
@@ -26,7 +26,7 @@ export function registerReviewRulesTools(server) {
           .describe('Filter by category. Omit to get all categories.'),
         severity: vazioComoOmitido(z.enum(['error', 'warning', 'info']))
           .describe('Filter by severity. Omit to get all severities.'),
-        limit: z.number().int().min(1).max(50).default(20).describe('Max rules to return (1-50, default 20).'),
+        limit: z.number().int().min(1).max(50).default(20).describe('Max rules to return (1-50, default 20). If total > count, the list was cut: raise limit or add a filter.'),
       },
     },
     async ({ team_id, category, severity, limit }) => {
@@ -46,16 +46,17 @@ export function registerReviewRulesTools(server) {
       }
 
       const order = { error: 0, warning: 1, info: 2 };
-      const rules = todas
+      const casadas = todas
         .filter((r) => r.team_id === team_id && r.active)
         .filter((r) => !category || r.category === category)
         .filter((r) => !severity || r.severity === severity)
-        .sort((a, b) => order[a.severity] - order[b.severity])
+        .sort((a, b) => order[a.severity] - order[b.severity] || a.id.localeCompare(b.id));
+      const rules = casadas
         .slice(0, limit)
         .map(({ id, category, severity, rule }) => ({ id, category, severity, rule }));
 
       return {
-        content: [{ type: 'text', text: JSON.stringify({ rules, count: rules.length }) }],
+        content: [{ type: 'text', text: JSON.stringify({ rules, count: rules.length, total: casadas.length }) }],
       };
     }
   );
