@@ -6,6 +6,7 @@ import { registerReviewRulesTools } from './tools/review-rules.js';
 import { registerAdrTools } from './tools/adrs.js';
 import { registerPrDiffTools } from './tools/pr-diff.js';
 import { registerReviewHistoryTools } from './tools/review-history.js';
+import { registerReviewPrompts } from './prompts/review-pr.js';
 
 const server = new McpServer({ name: 'revisor', version: '1.1.0' });
 
@@ -13,8 +14,8 @@ registerReviewRulesTools(server);
 registerAdrTools(server);
 registerPrDiffTools(server);
 registerReviewHistoryTools(server);
-// Prompts (a terceira primitiva do MCP) entram aqui com server.registerPrompt: viram slash commands
-// no Claude Code (/mcp__revisor__<nome>). Card 04.
+// Prompts (a terceira primitiva do MCP): viram slash commands no Claude Code (/mcp__revisor__<nome>).
+registerReviewPrompts(server);
 
 // Em stdio, stdout é o canal do protocolo: NUNCA use console.log aqui. Use console.error para debug.
 const transport = new StdioServerTransport();

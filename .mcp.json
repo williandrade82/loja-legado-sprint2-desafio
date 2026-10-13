@@ -4,7 +4,7 @@
       "type": "stdio",
       "command": "node",
       "args": [
-        "tools/revisor-mcp/src/index-inchado.js"
+        "tools/revisor-mcp/src/index.js"
       ]
     }
   }
