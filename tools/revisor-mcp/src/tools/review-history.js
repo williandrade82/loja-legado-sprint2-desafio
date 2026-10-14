@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { listHistory, appendHistory } from '../db.js';
+import { findSecret } from '../secrets.js';
+import { erroDeTime } from '../teams.js';
 
 export function registerReviewHistoryTools(server) {
   server.registerTool(
@@ -16,6 +18,8 @@ export function registerReviewHistoryTools(server) {
       },
     },
     async ({ team_id, days }) => {
+      const timeInvalido = erroDeTime(team_id);
+      if (timeInvalido) return timeInvalido;
       const since = Date.now() - days * 24 * 60 * 60 * 1000;
       const items = listHistory().filter((h) => h.team_id === team_id && new Date(h.reviewed_at).getTime() >= since);
       const byRepo = {};
@@ -65,6 +69,8 @@ export function registerReviewHistoryTools(server) {
       },
     },
     async (input) => {
+      const timeInvalido = erroDeTime(input.team_id);
+      if (timeInvalido) return timeInvalido;
       // Invariante no servidor, não no prompt: uma revisão que achou tentativa de manipulação
       // não pode terminar aprovada, qualquer que seja o texto que convenceu o modelo.
       if (input.decision === 'APPROVE' && input.injection_suspected > 0) {
@@ -76,6 +82,22 @@ export function registerReviewHistoryTools(server) {
               text:
                 `Refused: decision APPROVE with injection_suspected = ${input.injection_suspected}. ` +
                 'A review that found an attempt to instruct the reviewer must be REQUEST_CHANGES (or COMMENT). Nothing was logged.',
+            },
+          ],
+        };
+      }
+      // Segundo ingrediente a menos: o summary é o canal de saída do log_review. Recusa antes de gravar;
+      // o erro nomeia o padrão, nunca o trecho, para não repetir o segredo no resultado da tool.
+      const achado = findSecret(input.summary);
+      if (achado) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text',
+              text:
+                `Refused: the summary looks like it contains a secret (${achado}). Nothing was logged. ` +
+                'Rewrite the summary without the value (cite only the rule id and file:line, e.g. "hardcoded credential at src/x.ts:12") and call log_review again.',
             },
           ],
         };

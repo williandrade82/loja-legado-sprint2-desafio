@@ -112,6 +112,11 @@ try {
 
   const adrFrete = await chamar(enxuto, 'search_team_adrs', { team_id: TIME, keyword: 'frete' });
   resultado.retornos.search_team_adrs_frete = { adrs: contagem(adrFrete), caracteres: adrFrete.text.length };
+  const adrTimeErrado = await chamar(enxuto, 'search_team_adrs', { team_id: 'lojas', keyword: 'frete' });
+  const adrCheckout = await chamar(enxuto, 'search_team_adrs', { team_id: 'checkout', keyword: 'frete' });
+  checar('adrs_time', null, adrTimeErrado.isError && adrTimeErrado.text.includes('"lojas"') && adrTimeErrado.text.includes('loja') && !adrCheckout.isError && /"count":0/.test(adrCheckout.text),
+    'search_team_adrs: time inexistente → erro que cita o time e lista os válidos; time válido sem ADR (checkout) → lista vazia, não erro',
+    `search_team_adrs: time inexistente → ${adrTimeErrado.text.slice(0, 100)}; checkout → ${adrCheckout.text.slice(0, 80)}`, 'mesmo contrato do get_team_review_rules');
 
   // get_pr_diff
   const diff = await chamar(enxuto, 'get_pr_diff', { branch: PR });
@@ -141,6 +146,32 @@ try {
   const registra = await chamar(enxuto, 'log_review', { ...base, decision: 'REQUEST_CHANGES', injection_suspected: 1 });
   checar('log_review_registra', null, !registra.isError && /"logged":true/.test(registra.text), 'log_review registra REQUEST_CHANGES com injection_suspected 1 (histórico temporário)',
     `log_review não registrou: ${registra.text.slice(0, 100)} (histórico antes: ${antes})`);
+
+  // time inexistente: erro nas tools que antes devolviam zeros (métricas) ou gravavam (log_review)
+  const histAntes = JSON.parse(readFileSync(HISTORICO, 'utf8')).length;
+  const metricasErro = await chamar(enxuto, 'get_review_metrics', { team_id: 'lojas', days: 30 });
+  const logErro = await chamar(enxuto, 'log_review', { ...base, team_id: 'lojas', decision: 'COMMENT', injection_suspected: 0 });
+  const histDepois = JSON.parse(readFileSync(HISTORICO, 'utf8')).length;
+  checar('times_invalidos', null,
+    metricasErro.isError && logErro.isError && /"lojas"/.test(metricasErro.text) && /Valid teams/.test(logErro.text) && histDepois === histAntes,
+    'get_review_metrics e log_review recusam time inexistente (erro com os times válidos; log_review não grava)',
+    `time inexistente passou: métricas → ${metricasErro.text.slice(0, 70)}; log_review → ${logErro.text.slice(0, 70)} (histórico ${histAntes} → ${histDepois})`,
+    'erroDeTime(team_id) no início do handler (src/teams.js)');
+
+  // log_review: o summary é o canal de saída; recusa segredo antes de gravar (N3, trifecta)
+  const tamanhoAntes = JSON.parse(readFileSync(HISTORICO, 'utf8')).length;
+  const falsa = 'sk_' + 'live_' + 'abc123def456'; // chave inventada, montada aqui para não virar literal no arquivo
+  const comSegredo = await chamar(enxuto, 'log_review', { ...base, decision: 'REQUEST_CHANGES', injection_suspected: 0, summary: `Credencial hardcoded: ${falsa}` });
+  const comNome = await chamar(enxuto, 'log_review', { ...base, decision: 'REQUEST_CHANGES', injection_suspected: 0, summary: 'PAGAMENTO_API_KEY=' + falsa });
+  const tamanhoDepois = JSON.parse(readFileSync(HISTORICO, 'utf8')).length;
+  checar('log_review_segredo', null,
+    comSegredo.isError && comNome.isError && tamanhoDepois === tamanhoAntes && !comSegredo.text.includes(falsa) && /rewrite/i.test(comSegredo.text),
+    'log_review recusa summary com chave (sem gravar, sem repetir o valor no erro e dizendo como reescrever)',
+    `log_review ${!comSegredo.isError || !comNome.isError ? 'aceitou' : 'recusou mal'} um summary com chave: ${comSegredo.text.slice(0, 120)} (histórico ${tamanhoAntes} → ${tamanhoDepois})`,
+    'findSecret(input.summary) antes de appendHistory, em src/tools/review-history.js');
+  const semValor = await chamar(enxuto, 'log_review', { ...base, decision: 'REQUEST_CHANGES', injection_suspected: 0, summary: 'Credencial hardcoded em src/plugins/cupons/frete-gratis.ts:12 (R-02); valor omitido.' });
+  checar('log_review_segredo_falso_positivo', null, !semValor.isError && /"logged":true/.test(semValor.text),
+    'log_review aceita summary que cita a regra e o arquivo:linha sem o valor da chave', `log_review recusou um summary sem valor: ${semValor.text.slice(0, 120)}`);
 
   const metricas = await chamar(enxuto, 'get_review_metrics', { team_id: TIME, days: 90 });
   let m = {};

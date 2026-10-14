@@ -9,7 +9,11 @@
     "inspector": "npx @modelcontextprotocol/inspector node src/index.js",
     "inspector:inchado": "npx @modelcontextprotocol/inspector node src/index-inchado.js",
     "smoke": "node scripts/smoke.mjs",
-    "reset-history": "node scripts/reset-history.mjs"
+    "reset-history": "node scripts/reset-history.mjs",
+    "start:catalogo": "node src/index-catalogo.js",
+    "inspector:catalogo": "npx @modelcontextprotocol/inspector node src/index-catalogo.js",
+    "smoke:catalogo": "node scripts/smoke-catalogo.mjs",
+    "smoke:injecao": "node scripts/smoke-injecao-dados.mjs"
   },
   "license": "MIT",
   "dependencies": {
