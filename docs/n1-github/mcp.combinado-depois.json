@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "revisor": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["tools/revisor-mcp/src/index.js"]
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PAT}",
+        "X-MCP-Tools": "get_file_contents,list_pull_requests,pull_request_read,create_pull_request,update_pull_request,add_issue_comment,issue_read"
+      }
+    }
+  }
+}

@@ -44,6 +44,26 @@ Use o mesmo comando para medir o inchado (card 01) e o enxuto (card 02), senão 
 
 Trocar de servidor é trocar o `.mcp.json` (`mcp.inchado.json` e `mcp.enxuto.json` são as duas opções prontas) e abrir o `claude` de novo.
 
+## Servidores MCP deste repositório
+
+| Servidor | Entrada | Tools | Para quê |
+|---|---|---|---|
+| `revisor` (enxuto) | `tools/revisor-mcp/src/index.js` | 5 | regras de revisão, ADRs, diff de PR, métricas e `log_review` do time `loja`; prompt `review_pr` |
+| `revisor` (inchado) | `tools/revisor-mcp/src/index-inchado.js` | 63 | o ponto de partida do card 01 |
+| `catalogo` | `tools/revisor-mcp/src/index-catalogo.js` | 2 | catálogo e precificação do canal da loja, somente leitura (N2 do Desafio; PRD em `docs/prd-catalogo-mcp.md`) |
+
+O `.mcp.json` liga o `revisor` enxuto e o GitHub MCP remoto filtrado por `X-MCP-Tools` (7 tools), num total de 12 tools ativas. O token vai pela variável de ambiente `GITHUB_PAT`, nunca no arquivo. O `catalogo` fica fora do `.mcp.json` para não passar de 12 tools: use `claude --mcp-config mcp.catalogo.json`. Mais detalhes, comandos e variáveis de ambiente em [`tools/revisor-mcp/README.md`](tools/revisor-mcp/README.md).
+
+Testes sem LLM (todos saem com código 1 se falharem):
+
+```bash
+npm run smoke                                      # revisor: inventário, validações, defesas do log_review (inclui recusa de segredo no summary)
+npm --prefix tools/revisor-mcp run smoke:catalogo  # catalogo: validações, medida contra despejar as tabelas, banco real intacto
+npm --prefix tools/revisor-mcp run smoke:injecao   # regra envenenada em data/ → log_review recusa a chave (N3, opção B)
+```
+
+A entrega do Desafio está em [`entregas/williandrade82.md`](entregas/williandrade82.md).
+
 ## As tarefas
 
 Copie o board do Trello para a sua conta e mova os cards. Resumo:

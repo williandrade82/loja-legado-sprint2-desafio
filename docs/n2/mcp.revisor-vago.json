@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "revisor": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["tools/revisor-mcp/src/index.js"],
+      "env": { "REVISOR_HISTORY_FILE": "docs/n2/historico-vago.json" }
+    }
+  }
+}

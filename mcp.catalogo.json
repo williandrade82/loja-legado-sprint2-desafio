@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "catalogo": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "tools/revisor-mcp/src/index-catalogo.js"
+      ]
+    }
+  }
+}

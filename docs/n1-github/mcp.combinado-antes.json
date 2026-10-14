@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "revisor": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["tools/revisor-mcp/src/index-inchado.js"]
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PAT}"
+      }
+    }
+  }
+}
